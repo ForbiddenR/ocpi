@@ -1,13 +1,16 @@
 //! OCPI authentication, routing policy, and forwarding orchestration.
+mod location;
+mod version_details;
+mod versions;
+
 use std::sync::Arc;
 
 use axum::http::{HeaderMap, HeaderValue, StatusCode, Uri};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
-use serde_json::{Value, json};
 use uuid::Uuid;
 
 use crate::{
-    client::{ClientError, CpoClient, ForwardRequest},
+    client::{ClientError, CpoClient},
     config::Config,
 };
 
@@ -87,28 +90,6 @@ impl HubService {
         }
     }
 
-    pub fn versions(&self, headers: &HeaderMap) -> Result<Value, ServiceError> {
-        self.authenticate(headers)?;
-        let url = self
-            .config
-            .public_url
-            .join("ocpi/2.2")
-            .expect("validated public URL");
-        Ok(json!([{"version":"2.2", "url":url.as_str()}]))
-    }
-
-    pub fn version_details(&self, headers: &HeaderMap) -> Result<Value, ServiceError> {
-        self.authenticate(headers)?;
-        let url = self
-            .config
-            .public_url
-            .join("ocpi/2.2/locations/")
-            .expect("validated public URL");
-        Ok(
-            json!({"version":"2.2", "endpoints":[{"identifier":"locations", "role":"SENDER", "url":url.as_str()}]}),
-        )
-    }
-
     fn prepare<'a>(
         &self,
         id: &str,
@@ -182,30 +163,6 @@ impl HubService {
             ],
             request_id,
             correlation_id,
-        })
-    }
-
-    pub async fn location(
-        &self,
-        id: &str,
-        uri: &Uri,
-        headers: &HeaderMap,
-    ) -> Result<LocationResponse, ServiceError> {
-        let prepared = self.prepare(id, uri, headers)?;
-        let response = self
-            .cpo
-            .get_location(ForwardRequest {
-                location_id: id,
-                route_headers: prepared.route_headers,
-                correlation_id: &prepared.correlation_id,
-            })
-            .await?;
-        Ok(LocationResponse {
-            status: response.status,
-            content_type: response.content_type,
-            body: response.body,
-            request_id: prepared.request_id,
-            correlation_id: prepared.correlation_id,
         })
     }
 }

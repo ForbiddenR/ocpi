@@ -1,19 +1,22 @@
+mod location;
+mod method;
+mod version_details;
+mod versions;
+
+pub(crate) use location::location;
+pub(crate) use method::reject_head;
+pub(crate) use version_details::version_details;
+pub(crate) use versions::versions;
+
 use axum::{
     Json,
-    body::Body,
-    extract::{Path, State},
-    http::{HeaderMap, HeaderValue, StatusCode, Uri, header},
+    http::StatusCode,
     response::{IntoResponse, Response},
 };
 use chrono::Utc;
 use serde_json::{Value, json};
 
-use crate::service::{HubService, ServiceError};
-
-// Axum otherwise routes HEAD to the GET handler, potentially forwarding it.
-pub(crate) async fn reject_head() -> StatusCode {
-    StatusCode::METHOD_NOT_ALLOWED
-}
+use crate::service::ServiceError;
 
 fn envelope(data: Option<Value>, code: u32, message: &str) -> Value {
     let mut value = json!({"status_code": code, "status_message": message, "timestamp": Utc::now().to_rfc3339()});
@@ -55,43 +58,5 @@ fn discovery_response(result: Result<Value, ServiceError>) -> Response {
     match result {
         Ok(data) => Json(envelope(Some(data), 1000, "Success")).into_response(),
         Err(err) => error(err),
-    }
-}
-
-pub(crate) async fn versions(State(service): State<HubService>, headers: HeaderMap) -> Response {
-    discovery_response(service.versions(&headers))
-}
-
-pub(crate) async fn version_details(
-    State(service): State<HubService>,
-    headers: HeaderMap,
-) -> Response {
-    discovery_response(service.version_details(&headers))
-}
-
-pub(crate) async fn location(
-    State(service): State<HubService>,
-    Path(id): Path<String>,
-    uri: Uri,
-    headers: HeaderMap,
-) -> Response {
-    match service.location(&id, &uri, &headers).await {
-        Err(err) => error(err),
-        Ok(result) => {
-            let mut response = Response::new(Body::from(result.body));
-            *response.status_mut() = result.status;
-            if let Some(value) = result.content_type {
-                response.headers_mut().insert(header::CONTENT_TYPE, value);
-            }
-            response.headers_mut().insert(
-                "x-request-id",
-                HeaderValue::from_str(&result.request_id).expect("validated request ID"),
-            );
-            response.headers_mut().insert(
-                "x-correlation-id",
-                HeaderValue::from_str(&result.correlation_id).expect("validated correlation ID"),
-            );
-            response
-        }
     }
 }

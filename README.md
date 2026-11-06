@@ -58,12 +58,12 @@ router → handler → service → CPO client → mock CPO
 
 - `src/main.rs` loads the configuration and starts the server.
 - `src/router.rs` creates the hub and connects URLs to handlers.
-- `src/handler.rs` extracts HTTP requests and builds HTTP responses.
-- `src/service.rs` authenticates requests, checks the route, manages trace IDs, and asks the CPO client to forward valid requests. It uses HTTP headers and URIs directly because OCPI is an HTTP protocol.
+- `src/handler.rs` contains shared response helpers and declares the handler modules. The files in `src/handler/` handle individual HTTP endpoints and method rejection.
+- `src/service.rs` defines shared service state and helpers for authentication, routing, and trace IDs. The files in `src/service/` implement the discovery and location operations. The service uses HTTP headers and URIs directly because OCPI is an HTTP protocol.
 - `src/client.rs` sends requests to the configured CPO and reads its responses with time and size limits.
 - `src/config.rs` validates the demo configuration. `src/db.rs` is a separate SQLite helper and is not used by the hub.
 
-`src/hub.rs` re-exports `Hub`, so both `ocpi::hub::Hub` and `ocpi::router::Hub` work. The lower-level service methods are implementation-oriented and their Rust signatures changed in the architectural refactor; the HTTP endpoints remain the same.
+The `Hub` type is available as `ocpi::router::Hub`. The lower-level service methods are implementation-oriented; the HTTP endpoints remain the same.
 
 ## Configuration and limitations
 

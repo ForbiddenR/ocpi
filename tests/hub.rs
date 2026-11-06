@@ -12,7 +12,7 @@ use axum::{
     routing::get,
 };
 use base64::{Engine as _, engine::general_purpose::STANDARD};
-use ocpi::{config::Config, hub::Hub};
+use ocpi::{config::Config, router::Hub};
 use reqwest::Client;
 
 #[derive(Clone, Default)]
