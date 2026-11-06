@@ -1,19 +1,16 @@
+use anyhow::Context;
+use ocpi::{config::Config, router::Hub};
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let pool = ocpi::db::get_sqlite_pool().await?;
-
-    let versions: Vec<(String, String)> =
-        sqlx::query_as("SELECT version, url FROM versions ORDER BY version")
-            .fetch_all(&pool)
-            .await?;
-    for (version, url) in versions {
-        println!("OCPI {version}: {url}");
-    }
-
-    let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM credentials")
-        .fetch_one(&pool)
-        .await?;
-    println!("Example credentials: {count}");
-
+    let config_path = std::env::args_os()
+        .nth(1)
+        .context("usage: ocpi <config.json>")?;
+    let config = Config::load(config_path)?;
+    let bind = config.bind;
+    let hub = Hub::new(config)?;
+    let listener = tokio::net::TcpListener::bind(bind).await?;
+    println!("OCPI learning hub listening on http://{bind}");
+    axum::serve(listener, hub.router()).await?;
     Ok(())
 }

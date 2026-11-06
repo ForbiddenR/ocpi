@@ -1,0 +1,11 @@
+{
+  "bind": "127.0.0.1:8080",
+  "public_url": "http://127.0.0.1:8080/",
+  "sender_country": "NL",
+  "sender_party": "MSP",
+  "inbound_token": "demo-inbound-token",
+  "destination_country": "NL",
+  "destination_party": "CPO",
+  "outbound_token": "demo-outbound-token",
+  "locations_url": "http://127.0.0.1:9001/ocpi/2.2/locations/"
+}

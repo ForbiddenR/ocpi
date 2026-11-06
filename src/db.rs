@@ -24,9 +24,18 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    async fn test_pool() -> anyhow::Result<SqlitePool> {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await?;
+        MIGRATOR.run(&pool).await?;
+        Ok(pool)
+    }
+
     #[tokio::test]
     async fn initializes_and_reads_example_ocpi_data() -> anyhow::Result<()> {
-        let pool = get_sqlite_pool().await?;
+        let pool = test_pool().await?;
         let rows: Vec<(String, String)> =
             sqlx::query_as("SELECT version, url FROM versions ORDER BY version")
                 .fetch_all(&pool)
@@ -61,7 +70,7 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_invalid_credential_values() -> anyhow::Result<()> {
-        let pool = get_sqlite_pool().await?;
+        let pool = test_pool().await?;
         for (token, roles) in [("x".repeat(65), "[]"), ("other-token".into(), "{}")] {
             let result =
                 sqlx::query("INSERT INTO credentials (token, url, roles_json) VALUES (?, ?, ?)")
